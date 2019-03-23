@@ -85,6 +85,7 @@ class ActivityType(Enum):
     ARTICLE = "Article"
     VIDEO = "Video"
     AUDIO = "Audio"
+    DOCUMENT = "Document"
 
     ACCEPT = "Accept"
     REJECT = "Reject"
@@ -115,7 +116,13 @@ ACTOR_TYPES = [
     ActivityType.SERVICE,
 ]
 
-CREATE_TYPES = [ActivityType.NOTE, ActivityType.ARTICLE, ActivityType.VIDEO, ActivityType.AUDIO]
+CREATE_TYPES = [
+    ActivityType.NOTE,
+    ActivityType.ARTICLE,
+    ActivityType.VIDEO,
+    ActivityType.AUDIO,
+    ActivityType.DOCUMENT,
+]
 
 COLLECTION_TYPES = [ActivityType.COLLECTION, ActivityType.ORDERED_COLLECTION]
 
@@ -896,7 +903,13 @@ class Video(Note):
     OBJECT_REQURIED = False
 
 
-class Audio(Note):
+class Document(BaseActivity):
+    ACTIVITY_TYPE = ActivityType.DOCUMENT
+    ACTOR_REQUIRED = True
+    OBJECT_REQUIRED = False
+
+
+class Audio(Document):
     ACTIVITY_TYPE = ActivityType.AUDIO
     ACTOR_REQUIRED = True
     OBJECT_REQUIRED = False
