@@ -15,6 +15,7 @@ from .errors import ActivityGoneError
 from .errors import ActivityNotFoundError
 from .errors import ActivityUnavailableError
 from .errors import BadActivityError
+from .errors import NotAnActivityError
 from .errors import Error
 from .errors import UnexpectedActivityTypeError
 from .key import Key
@@ -107,6 +108,9 @@ class ActivityType(Enum):
     # Others
     MENTION = "Mention"
 
+    # Mastodon specific?
+    QUESTION = "Question"
+
 
 ACTOR_TYPES = [
     ActivityType.PERSON,
@@ -122,6 +126,7 @@ CREATE_TYPES = [
     ActivityType.VIDEO,
     ActivityType.AUDIO,
     ActivityType.DOCUMENT,
+    ActivityType.QUESTION
 ]
 
 COLLECTION_TYPES = [ActivityType.COLLECTION, ActivityType.ORDERED_COLLECTION]
@@ -164,9 +169,9 @@ def clean_activity(activity: ObjectType) -> Dict[str, Any]:
     """
     for field in ["bto", "bcc", "source"]:
         if field in activity:
-            del (activity[field])
+            del activity[field]
         if activity["type"] == "Create" and field in activity["object"]:
-            del (activity["object"][field])
+            del activity["object"][field]
     return activity
 
 
@@ -472,7 +477,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
         if embed:
             for k in ["@context", "signature"]:
                 if k in data:
-                    del (data[k])
+                    del data[k]
         if (
             data.get("object")
             and embed_object_id_only
@@ -538,7 +543,7 @@ class BaseActivity(object, metaclass=_ActivityMeta):
 
             try:
                 actor = fetch_remote_activity(recipient)
-            except ActivityGoneError:
+            except (ActivityGoneError, ActivityNotFoundError, NotAnActivityError):
                 logger.info(f"{recipient} is gone")
                 continue
             except ActivityUnavailableError:
@@ -571,7 +576,11 @@ class BaseActivity(object, metaclass=_ActivityMeta):
                         # TODO(tsileo): retry separately?
                         logger.info(f"failed {recipient} to fetch recipient")
                         continue
-                    except (ActivityGoneError, ActivityNotFoundError):
+                    except (
+                        ActivityGoneError,
+                        ActivityNotFoundError,
+                        NotAnActivityError,
+                    ):
                         logger.info(f"{item} is gone")
                         continue
 
@@ -889,6 +898,15 @@ class Note(BaseActivity):
                     logger.exception(f"invalid tag {tag!r}")
 
         return False
+
+
+class Question(Note):
+    ACTIVITY_TYPE = ActivityType.QUESTION
+    ACTOR_REQUIRED = True
+    OBJECT_REQURIED = False
+
+    def one_of(self) -> List[Dict[str, Any]]:
+        return self._data.get("oneOf", [])
 
 
 class Article(Note):
